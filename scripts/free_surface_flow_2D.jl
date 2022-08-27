@@ -38,7 +38,7 @@ using Plots.PlotMeasures
     # init
     vx      = zeros(ny  ,nz  )
     eII     = zeros(ny-1,nz-1)
-    ηeff    = zeros(ny,nz)
+    ηeff    = zeros(ny  ,nz  )
     τxz     = zeros(ny  ,nz-1)
     τxy     = zeros(ny-1,nz  )
     # action
