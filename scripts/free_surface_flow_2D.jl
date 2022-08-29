@@ -34,26 +34,25 @@ macro eII() esc(:(sqrt.((avz(diff(vx,dims=1)./dy)).^2 .+ (avy(diff(vx,dims=2)./d
     re      = π/7
     # preprocessing
     dy,dz   = ly/ny,lz/nz
-    yv,zv   = LinRange(-ly/2,ly/2,ny+1),LinRange(0.0,lz,nz+1)
-    yc,zc   = av(yv),av(zv)
+    yc,zc   = LinRange(-ly/2+dy/2,ly/2-dy/2,ny),LinRange(dz/2,lz-dz/2,nz)
+    yv,zv   = av(yc),av(zc)
     vdτ     = cfl*min(dy,dz)
     # init
     vx      = zeros(ny  ,nz  )
-    ηeff    = zeros(ny+1,nz+1)
-    τxy     = zeros(ny-1,nz  )
-    τxz     = zeros(ny  ,nz-1)
+    ηeff    = zeros(ny-1,nz-1)
+    τxy     = zeros(ny-1,nz-2)
+    τxz     = zeros(ny-2,nz-1)
     # action
     iters_evo = Float64[]; errs_evo = Float64[]; err = 2ϵtol; iter = 1
     while err >= ϵtol && iter <= maxiter
-        ηeff[2:end-1,2:end-1] .= ηeff[2:end-1,2:end-1].*(1.0-ηrel) .+ ηrel./(1.0./(k0.*@eII().^(npow-1.0)) .+ 1.0/ηreg)
-        bc2!(ηeff)
-        τxy                  .+= (.-τxy .+ avz(ηeff[2:end-1,:]).*diff(vx,dims=1)./dy)./(1.0 + 3cfl*ny/re)
-        τxz                  .+= (.-τxz .+ avy(ηeff[:,2:end-1]).*diff(vx,dims=2)./dz)./(1.0 + 3cfl*ny/re)
-        vx[2:end-1,2:end-1]  .+= (diff(τxy[:,2:end-1],dims=1)./dy .+ diff(τxz[2:end-1,:],dims=2)./dz .+ ρg*sinα).*(vdτ*lz/re)./av4(ηeff[2:end-1,2:end-1])
-        vx[:,end]             .= vx[:,end-1]
-        vx[1,:]               .= vx[2,:]
+        ηeff                 .= ηeff.*(1.0-ηrel) .+ ηrel./(1.0./(k0.*@eII().^(npow-1.0)) .+ 1.0/ηreg)
+        τxy                 .+= (.-τxy .+ avz(ηeff).*diff(vx[:,2:end-1],dims=1)./dy)./(1.0 + 3cfl*ny/re)
+        τxz                 .+= (.-τxz .+ avy(ηeff).*diff(vx[2:end-1,:],dims=2)./dz)./(1.0 + 3cfl*ny/re)
+        vx[2:end-1,2:end-1] .+= (diff(τxy,dims=1)./dy .+ diff(τxz,dims=2)./dz .+ ρg*sinα).*(vdτ*lz/re)./av4(ηeff)
+        vx[:,end]            .= vx[:,end-1]
+        vx[1,:]              .= vx[2,:]
         if iter % ncheck == 0
-            err = maximum(abs.(diff(τxy[:,2:end-1],dims=1)./dy .+ diff(τxz[2:end-1,:],dims=2)./dz .+ ρg*sinα))*lz/psc
+            err = maximum(abs.(diff(τxy,dims=1)./dy .+ diff(τxz,dims=2)./dz .+ ρg*sinα))*lz/psc
             push!(iters_evo,iter/nz);push!(errs_evo,err)
             p1 = heatmap(yc,zc,vx'  ;aspect_ratio=1,xlabel="y",ylabel="z",title="Vx",xlims=(-ly/2,ly/2),ylims=(0,lz),right_margin=10mm)
             p2 = heatmap(yv,zv,ηeff';aspect_ratio=1,xlabel="y",ylabel="z",title="ηeff",xlims=(-ly/2,ly/2),ylims=(0,lz),colorbar_scale=:log10)
