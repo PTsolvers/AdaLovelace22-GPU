@@ -7,6 +7,8 @@ using Plots.PlotMeasures
 @views av4(A)  = 0.25.*(A[1:end-1,1:end-1] .+ A[2:end,1:end-1] .+ A[2:end,1:end-1] .+ A[2:end,2:end])
 @views bc2!(A) = (A[[1,end],:] .= A[[2,end-1],:]; A[:,[1,end]] .= A[:,[2,end-1]])
 
+macro eII() esc(:(sqrt.((avz(diff(vx,dims=1)./dy)).^2 .+ (avy(diff(vx,dims=2)./dz)).^2))) end
+
 @views function main()
     # physics
     # non-dimensional
@@ -37,15 +39,13 @@ using Plots.PlotMeasures
     vdτ     = cfl*min(dy,dz)
     # init
     vx      = zeros(ny  ,nz  )
-    eII     = zeros(ny-1,nz-1)
     ηeff    = zeros(ny+1,nz+1)
     τxy     = zeros(ny-1,nz  )
     τxz     = zeros(ny  ,nz-1)
     # action
     iters_evo = Float64[]; errs_evo = Float64[]; err = 2ϵtol; iter = 1
     while err >= ϵtol && iter <= maxiter
-        eII                   .= sqrt.((avz(diff(vx,dims=1)./dy)).^2 .+ (avy(diff(vx,dims=2)./dz)).^2)
-        ηeff[2:end-1,2:end-1] .= ηeff[2:end-1,2:end-1].*(1.0-ηrel) .+ ηrel./(1.0./(k0.*eII.^(npow-1.0)) .+ 1.0/ηreg)
+        ηeff[2:end-1,2:end-1] .= ηeff[2:end-1,2:end-1].*(1.0-ηrel) .+ ηrel./(1.0./(k0.*@eII().^(npow-1.0)) .+ 1.0/ηreg)
         bc2!(ηeff)
         τxy                  .+= (.-τxy .+ avz(ηeff[2:end-1,:]).*diff(vx,dims=1)./dy)./(1.0 + 3cfl*ny/re)
         τxz                  .+= (.-τxz .+ avy(ηeff[:,2:end-1]).*diff(vx,dims=2)./dz)./(1.0 + 3cfl*ny/re)
