@@ -10,12 +10,12 @@ macro d_ya(A) esc(:( $A[iy+1,iz] - $A[iy,iz] )) end
 macro d_za(A) esc(:( $A[iy,iz+1] - $A[iy,iz] )) end
 macro d_yi(A) esc(:( $A[iy+1,iz+1] - $A[iy,iz+1] )) end
 macro d_zi(A) esc(:( $A[iy+1,iz+1] - $A[iy+1,iz] )) end
-macro eII(A)  esc(:( sqrt((0.5*(($A[iy+1,iz+1] - $A[iy,iz+1])/dy + ($A[iy+1,iz] - $A[iy,iz])/dy))^2 + (0.5*(($A[iy+1,iz+1] - $A[iy+1,iz])/dz + ($A[iy,iz+1] - $A[iy,iz])/dz))^2) )) end
+macro eII()   esc(:( sqrt((0.5*((vx[iy+1,iz+1] - vx[iy,iz+1])/dy + (vx[iy+1,iz] - vx[iy,iz])/dy))^2 + (0.5*((vx[iy+1,iz+1] - vx[iy+1,iz])/dz + (vx[iy,iz+1] - vx[iy,iz])/dz))^2) )) end
 
 function update_ηeff!(ηeff,vx,k0,npow,ηreg,ηrel,dy,dz)
     iy = (blockIdx().x-1)*blockDim().x + threadIdx().x
     iz = (blockIdx().y-1)*blockDim().y + threadIdx().y
-    if iy<=size(ηeff,1) && iz<=size(ηeff,2) ηeff[iy,iz] = ηeff[iy,iz]*(1.0-ηrel) + ηrel/(1.0./(k0*@eII(vx)^(npow-1.0)) + 1.0/ηreg) end
+    if iy<=size(ηeff,1) && iz<=size(ηeff,2) ηeff[iy,iz] = ηeff[iy,iz]*(1.0-ηrel) + ηrel/(1.0./(k0*@eII()^(npow-1.0)) + 1.0/ηreg) end
     return
 end
 
