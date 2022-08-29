@@ -4,7 +4,7 @@ using Plots.PlotMeasures
 @views av(A)   = 0.5.*(A[1:end-1] .+ A[2:end])
 @views avy(A)  = 0.5.*(A[1:end-1,:] .+ A[2:end,:])
 @views avz(A)  = 0.5.*(A[:,1:end-1] .+ A[:,2:end])
-@views av4(A)  = 0.25.*(A[1:end-1,1:end-1] .+ A[2:end,1:end-1] .+ A[2:end,1:end-1] .+ A[2:end,2:end])
+@views av4(A)  = 0.25.*(A[1:end-1,1:end-1] .+ A[1:end-1,2:end] .+ A[2:end,1:end-1] .+ A[2:end,2:end])
 @views bc2!(A) = (A[[1,end],:] .= A[[2,end-1],:]; A[:,[1,end]] .= A[:,[2,end-1]])
 
 macro eII() esc(:(sqrt.((avz(diff(vx,dims=1)./dy)).^2 .+ (avy(diff(vx,dims=2)./dz)).^2))) end
