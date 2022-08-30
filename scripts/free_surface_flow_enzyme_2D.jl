@@ -16,12 +16,12 @@ macro τxz(iy,iz) esc(:( @ηeff_xz($iy,$iz)*@∂vx_∂z($iy+1,$iz) )) end
 macro eII_xy(iy,iz) esc(:( sqrt(@∂vx_∂y($iy,$iz+1)^2 + @∂vx_∂z_a4($iy,$iz)^2) )) end
 macro eII_xz(iy,iz) esc(:( sqrt(@∂vx_∂y_a4($iy,$iz)^2 + @∂vx_∂z($iy+1,$iz)^2) )) end
 
-macro ηeff_xy(iy,iz) esc(:( hmean(k0*@eII_xy($iy,$iz)^(npow-1.0), ηreg) )) end
-macro ηeff_xz(iy,iz) esc(:( hmean(k0*@eII_xz($iy,$iz)^(npow-1.0), ηreg) )) end
+macro ηeff_xy(iy,iz) esc(:( hmean(0.5*(k[$iy,iz]+k[$iy,iz+1])*@eII_xy($iy,$iz)^(npow-1.0), ηreg) )) end
+macro ηeff_xz(iy,iz) esc(:( hmean(0.5*(k[$iy,iz]+k[$iy+1,iz])*@eII_xz($iy,$iz)^(npow-1.0), ηreg) )) end
 
 macro ηeffτ(iy,iz) esc(:( max(ηeff_xy[$iy,$iz],ηeff_xy[$iy+1,$iz],ηeff_xz[$iy,$iz],ηeff_xz[$iy,$iz+1]) )) end
 
-function residual!(r_vx,vx,k0,npow,ηreg,ρg,sinα,dy,dz)
+function residual!(r_vx,vx,k,npow,ηreg,ρg,sinα,dy,dz)
     for iz = axes(r_vx,2), iy = axes(r_vx,1)
         r_vx[iy,iz] = (@τxy(iy+1,iz)-@τxy(iy,iz))/dy + (@τxz(iy,iz+1)-@τxz(iy,iz))/dz + ρg*sinα
     end
@@ -60,7 +60,7 @@ end
     ηrel    = 1e-2
     maxiter = 200max(ny,nz)
     ncheck  = 5max(ny,nz)
-    re      = π/6
+    re      = π/10
     # preprocessing
     dy,dz   = ly/ny,lz/nz
     yc,zc   = LinRange(-ly/2+dy/2,ly/2-dy/2,ny),LinRange(dz/2,lz-dz/2,nz)
@@ -75,7 +75,9 @@ end
     τxz     = zeros(ny-2,nz-1)
     JVP     = zeros(ny-2,nz-2)
     vect    = zeros(ny-2,nz-2)
-    ∂r_∂v!(JVP,vect,r_vx,vx,k0,npow,ηreg,ρg,sinα,dy,dz)
+    k       = zeros(ny-1,nz-1)
+    k      .= k0
+    ∂r_∂v!(JVP,vect,r_vx,vx,k,npow,ηreg,ρg,sinα,dy,dz)
     # action
     iters_evo = Float64[]; errs_evo = Float64[]; err = 2ϵtol; iter = 1
     while err >= ϵtol && iter <= maxiter
@@ -94,7 +96,7 @@ end
         end
         vx[:,end] .= vx[:,end-1]; vx[1,:] .= vx[2,:]
         if iter % ncheck == 0
-            residual!(r_vx,vx,k0,npow,ηreg,ρg,sinα,dy,dz)
+            residual!(r_vx,vx,k,npow,ηreg,ρg,sinα,dy,dz)
             eval_ηeff!(ηeff,ηeff_xy,ηeff_xz)
             err = maximum(abs.(r_vx))*lz/psc
             push!(iters_evo,iter/nz);push!(errs_evo,err)
