@@ -33,10 +33,15 @@ function ∂r_∂v!(JVP,vect,r_vx,vx,k0,npow,ηreg,ρg,sinα,dy,dz)
     return
 end
 
+function eval_ηeff!(ηeff,ηeff_xy,ηeff_xz)
+    for iz = axes(ηeff,2), iy = axes(ηeff,1) ηeff[iy,iz] = @ηeffτ(iy,iz) end
+    return
+end
+
 @views function main()
     # physics
     # non-dimensional
-    npow    = 1.0/1.0
+    npow    = 1.0/3.0
     sinα    = sin(π/6)
     # dimensionally independent
     ly,lz   = 1.0,1.0 # [m]
@@ -65,6 +70,7 @@ end
     r_vx    = zeros(ny-2,nz-2)
     ηeff_xy = zeros(ny-1,nz-2)
     ηeff_xz = zeros(ny-2,nz-1)
+    ηeff    = zeros(ny-2,nz-2)
     τxy     = zeros(ny-1,nz-2)
     τxz     = zeros(ny-2,nz-1)
     JVP     = zeros(ny-2,ny-2)
@@ -89,10 +95,12 @@ end
         vx[:,end] .= vx[:,end-1]; vx[1,:] .= vx[2,:]
         if iter % ncheck == 0
             residual!(r_vx,vx,k0,npow,ηreg,ρg,sinα,dy,dz)
+            eval_ηeff!(ηeff,ηeff_xy,ηeff_xz)
             err = maximum(abs.(r_vx))*lz/psc
             push!(iters_evo,iter/nz);push!(errs_evo,err)
             p1 = heatmap(yc,zc,vx';aspect_ratio=1,xlabel="y",ylabel="z",title="Vx",xlims=(-ly/2,ly/2),ylims=(0,lz),right_margin=10mm)
-            p2 = heatmap(yc[2:end-1],zc[2:end-1],r_vx';aspect_ratio=1,xlabel="y",ylabel="z",title="ηeff",xlims=(-ly/2,ly/2),ylims=(0,lz))
+            # p2 = heatmap(yc[2:end-1],zc[2:end-1],r_vx';aspect_ratio=1,xlabel="y",ylabel="z",title="resid",xlims=(-ly/2,ly/2),ylims=(0,lz))
+            p2 = heatmap(yc[2:end-1],zc[2:end-1],log10.(ηeff)';aspect_ratio=1,xlabel="y",ylabel="z",title="log10(ηeff)",xlims=(-ly/2,ly/2),ylims=(0,lz))
             p3 = plot(iters_evo,errs_evo;xlabel="niter/nx",ylabel="err",yscale=:log10,framestyle=:box,legend=false,markershape=:circle)
             p4 = plot(yc,vx[:,end];xlabel="y",ylabel="Vx",framestyle=:box,legend=false)
             display(plot(p1,p2,p3,p4;size=(800,800),layout=(2,2),bottom_margin=10mm,left_margin=10mm,right_margin=10mm))
