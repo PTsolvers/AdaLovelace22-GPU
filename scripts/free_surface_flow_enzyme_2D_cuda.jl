@@ -17,8 +17,8 @@ macro τxz(iy,iz) esc(:( @ηeff_xz($iy,$iz)*@∂vx_∂z($iy+1,$iz) )) end
 macro eII_xy(iy,iz) esc(:( sqrt(@∂vx_∂y($iy,$iz+1)^2 + @∂vx_∂z_a4($iy,$iz)^2) )) end
 macro eII_xz(iy,iz) esc(:( sqrt(@∂vx_∂y_a4($iy,$iz)^2 + @∂vx_∂z($iy+1,$iz)^2) )) end
 
-macro ηeff_xy(iy,iz) esc(:( hmean(0.5*(k[$iy,iz]+k[$iy,iz+1])*@eII_xy($iy,$iz)^(npow-1.0), ηreg) )) end
-macro ηeff_xz(iy,iz) esc(:( hmean(0.5*(k[$iy,iz]+k[$iy+1,iz])*@eII_xz($iy,$iz)^(npow-1.0), ηreg) )) end
+macro ηeff_xy(iy,iz) esc(:( hmean(0.5*(k[$iy,$iz]+k[$iy,$iz+1])*@eII_xy($iy,$iz)^(npow-1.0), ηreg) )) end
+macro ηeff_xz(iy,iz) esc(:( hmean(0.5*(k[$iy,$iz]+k[$iy+1,$iz])*@eII_xz($iy,$iz)^(npow-1.0), ηreg) )) end
 
 macro ηeffτ(iy,iz) esc(:( max(ηeff_xy[$iy,$iz],ηeff_xy[$iy+1,$iz],ηeff_xz[$iy,$iz],ηeff_xz[$iy,$iz+1]) )) end
 
