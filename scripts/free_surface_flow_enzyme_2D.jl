@@ -28,8 +28,8 @@ function residual!(r_vx,vx,k,npow,ηreg,ρg,sinα,dy,dz)
     return
 end
 
-function ∂r_∂v!(JVP,vect,r_vx,vx,k0,npow,ηreg,ρg,sinα,dy,dz)
-    Enzyme.autodiff(residual!,Duplicated(r_vx,vect),Duplicated(vx,JVP),Const(k0),Const(npow),Const(ηreg),Const(ρg),Const(sinα),Const(dy),Const(dz))
+function ∂r_∂v!(JVP,vect,r_vx,vx,k,npow,ηreg,ρg,sinα,dy,dz)
+    Enzyme.autodiff(residual!,Duplicated(r_vx,vect),Duplicated(vx,JVP),Const(k),Const(npow),Const(ηreg),Const(ρg),Const(sinα),Const(dy),Const(dz))
     return
 end
 
