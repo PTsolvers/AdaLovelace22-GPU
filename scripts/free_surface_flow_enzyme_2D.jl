@@ -19,9 +19,6 @@ macro eII_xz(iy,iz) esc(:( sqrt(@∂vx_∂y_a4($iy,$iz)^2 + @∂vx_∂z($iy+1,$i
 macro ηeff_xy(iy,iz) esc(:( hmean(0.5*(k[$iy,iz]+k[$iy,iz+1])*@eII_xy($iy,$iz)^(npow-1.0), ηreg) )) end
 macro ηeff_xz(iy,iz) esc(:( hmean(0.5*(k[$iy,iz]+k[$iy+1,iz])*@eII_xz($iy,$iz)^(npow-1.0), ηreg) )) end
 
-# macro ηeff_xy(iy,iz) esc(:( 0.5*(k[$iy,iz]+k[$iy,iz+1]) )) end
-# macro ηeff_xz(iy,iz) esc(:( 0.5*(k[$iy,iz]+k[$iy+1,iz]) )) end
-
 macro ηeffτ(iy,iz) esc(:( max(ηeff_xy[$iy,$iz],ηeff_xy[$iy+1,$iz],ηeff_xz[$iy,$iz],ηeff_xz[$iy,$iz+1]) )) end
 
 function residual!(r_vx,vx,k,npow,ηreg,ρg,sinα,dy,dz)
@@ -79,15 +76,15 @@ end
 
 @views function solve_inverse!(Ψ,∂Ψ_∂τ,∂J_∂v,JVP,tmp,vx_obs,r_vx,vx,k,ηeff_xy,ηeff_xz,npow,ηreg,ρg,sinα,dy,dz,ly,lz,ny,nz,yc,zc)
     ϵtol = 1e-6; ncheck = 5max(size(Ψ)...); maxiter = 100ncheck
-    dmp  = 0.6/max(size(Ψ)...)
+    dmp  = 4/max(size(Ψ)...)
     ηeffτ = zeros(ny,nz)
     for iz = axes(r_vx,2), iy = axes(r_vx,1)
         ηeffτ[iy+1,iz+1] = @ηeffτ(iy,iz)
     end
     ηeffτ[[1,end],:] .= ηeffτ[[2,end-1],:];  ηeffτ[:,[1,end]] .=  ηeffτ[:,[2,end-1]]
     dτ     = 0.5*min(dy,dz)./sqrt.(ηeffτ)
-    ∂J_∂v .= vx .- vx_obs
-    Ψ .= 1.0
+    ∂J_∂v .= (vx .- vx_obs).*exp.(5.0.*(zc' .- lz)./lz)
+    Ψ     .= 0.0
     println("Inverse solve:")
     iters_evo = Float64[]; errs_evo = Float64[]; err = 2ϵtol; iter = 1
     while err >= ϵtol && iter <= maxiter
@@ -126,7 +123,7 @@ end
     ηreg    = 1e4*ηsc
     # numerics
     nz      = 128
-    ny      = ceil(Int,nz*ly/lz)
+    ny      = ceil(Int,nz*ly/lz) + 5
     cfl     = 1/2.1
     ϵtol    = 1e-4
     ηrel    = 1e-2
