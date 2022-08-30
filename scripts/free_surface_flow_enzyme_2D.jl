@@ -125,7 +125,7 @@ end
     # dimensionally dependent
     ηreg    = 1e4*ηsc
     # numerics
-    nz      = 100
+    nz      = 128
     ny      = ceil(Int,nz*ly/lz)
     cfl     = 1/2.1
     ϵtol    = 1e-4
