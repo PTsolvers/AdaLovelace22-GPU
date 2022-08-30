@@ -115,7 +115,7 @@ end
     vect     = CUDA.zeros(Float64,ny-2,nz-2)
     k        = k0.*CUDA.ones(Float64,ny-1,nz-1)
     # Inverse (JVP)
-    # ∂r_∂v!(JVP,vect,r_vx,vx,k,npow,ηreg,ρg,sinα,dy,dz)
+    CUDA.@sync @cuda threads=nthreads blocks=nblocks ∂r_∂v!(JVP,vect,r_vx,vx,k,npow,ηreg,ρg,sinα,dy,dz)
     # action
     iters_evo = Float64[]; errs_evo = Float64[]; err = 2ϵtol; iter = 1
     while err >= ϵtol && iter <= maxiter
