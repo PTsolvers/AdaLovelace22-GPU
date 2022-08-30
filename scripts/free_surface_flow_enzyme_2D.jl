@@ -53,7 +53,7 @@ end
     # dimensionally dependent
     ηreg    = 1e4*ηsc
     # numerics
-    nz      = 100
+    nz      = 128
     ny      = ceil(Int,nz*ly/lz)
     cfl     = 1/2.1
     ϵtol    = 1e-6
@@ -73,8 +73,8 @@ end
     ηeff    = zeros(ny-2,nz-2)
     τxy     = zeros(ny-1,nz-2)
     τxz     = zeros(ny-2,nz-1)
-    JVP     = zeros(ny-2,ny-2)
-    vect    = zeros(ny-2,ny-2)
+    JVP     = zeros(ny-2,nz-2)
+    vect    = zeros(ny-2,nz-2)
     ∂r_∂v!(JVP,vect,r_vx,vx,k0,npow,ηreg,ρg,sinα,dy,dz)
     # action
     iters_evo = Float64[]; errs_evo = Float64[]; err = 2ϵtol; iter = 1
