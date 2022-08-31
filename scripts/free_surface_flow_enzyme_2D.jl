@@ -43,11 +43,6 @@ function ∂r_∂k!(Jn,minus_Ψ,r_vx,vx,k,npow,ηreg,ρgsinα,dy,dz)
     return
 end
 
-function eval_ηeff!(ηeff,ηeff_xy,ηeff_xz)
-    for iz = axes(ηeff,2), iy = axes(ηeff,1) ηeff[iy,iz] = @ηeffτ(iy,iz) end
-    return
-end
-
 @views function solve_forward!(vx,τxy,τxz,r_vx,k,ηeff_xy,ηeff_xz,ρgsinα,npow,ηreg,ηrel,psc,dy,dz,ny,nz,ly,lz,re,cfl,vdτ,ϵtol,maxiter,ncheck)
     vx      .= 0.0; r_vx    .= 0.0
     ηeff_xy .= 0.0; ηeff_xz .= 0.0
@@ -130,7 +125,7 @@ function eval_ηeff!(ηeff,k,vx,ηreg,npow,dy,dz)
 end
 
 function make_plots(vx_synt,vx_inv,Jn,ηeff_inv,yc,zc,gd_iters,J_evo)
-    opts_2d = (aspect_ratio=1,xlims=extrema(yc),ylims=extrema(zc),framestyle=:box)
+    opts_2d = (aspect_ratio=1,xlims=extrema(yc),ylims=extrema(zc),framestyle=:box,c=:turbo)
     plots = (
         heatmap(yc,zc,vx_synt';xlabel="y",ylabel="z",title="vₓ synthetic",opts_2d...),
         heatmap(yc,zc,vx_inv' ;xlabel="y",ylabel="z",title="vₓ inverse"  ,opts_2d...),
