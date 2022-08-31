@@ -52,7 +52,7 @@ end
     vx      .= 0.0; r_vx    .= 0.0
     ηeff_xy .= 0.0; ηeff_xz .= 0.0
     τxy     .= 0.0; τxz     .= 0.0
-    println("  Forward solve:")
+    println("    forward solve:")
     err = 2ϵtol; iter = 1
     while err >= ϵtol && iter <= maxiter
         for iz = union(axes(τxy,2),axes(τxz,2)), iy = union(axes(τxy,1),axes(τxz,1))
@@ -72,7 +72,7 @@ end
         if iter % ncheck == 0
             residual!(r_vx,vx,k,npow,ηreg,ρgsinα,dy,dz)
             err = maximum(abs.(r_vx))*lz/psc
-            @printf("    #iter/nz=%.1f,err=%1.3e\n",iter/nz,err)
+            @printf("      #iter/nz=%.1f,err=%1.3e\n",iter/nz,err)
         end
         iter += 1
     end
@@ -90,7 +90,7 @@ end
     dτ     = 0.5*min(dy,dz)./sqrt.(ηeffτ)
     ∂J_∂v .= (vx .- vx_obs).*wt_cost
     Ψ     .= 0.0
-    println("  Inverse solve:")
+    println("  adjoint solve:")
     err = 2ϵtol; iter = 1
     while err >= ϵtol && iter <= maxiter
         JVP .= .-∂J_∂v; tmp .= Ψ[2:end-1,2:end-1]
@@ -139,8 +139,8 @@ function make_plots(vx_synt,vx_inv,ηeff_synt,ηeff_inv,yc,zc,gd_iters,J_evo)
         heatmap(yc,zc,vx_synt';xlabel="y",ylabel="z",title="vₓ synthetic",opts_2d...),
         heatmap(yc,zc,vx_inv' ;xlabel="y",ylabel="z",title="vₓ inverse"  ,opts_2d...),
         plot(yc,[vx_synt[:,end], vx_inv[:,end]];xlabel="y",ylabel="vₓ surface",framestyle=:box,label=["vₓ synthetic" "vₓ inverse"]),
-        heatmap(yc[2:end-1],zc[2:end-1],ηeff_synt';xlabel="y",ylabel="z",title="η synthetic",#=clims=(1e1,1e4),=#colorbar_scale=:log10,opts_2d...),
-        heatmap(yc[2:end-1],zc[2:end-1],ηeff_inv' ;xlabel="y",ylabel="z",title="η inverse"  ,#=clims=(1e1,1e4),=#colorbar_scale=:log10,opts_2d...),
+        heatmap(yc[2:end-1],zc[2:end-1],ηeff_synt';xlabel="y",ylabel="z",title="η synthetic",clims=(1e1,1e4),colorbar_scale=:log10,opts_2d...),
+        heatmap(yc[2:end-1],zc[2:end-1],ηeff_inv' ;xlabel="y",ylabel="z",title="η inverse"  ,clims=(1e1,1e4),colorbar_scale=:log10,opts_2d...),
         plot(gd_iters,J_evo;xlabel="# gradient descent iters",ylabel="J/J_ini",yscale=:log10,framestyle=:box,legend=false,markershape=:circle),
     )
     display(plot(plots...;size=(1400,800),layout=(2,3),bottom_margin=10mm,left_margin=10mm,right_margin=10mm))
@@ -164,17 +164,18 @@ end
     ρgsinα     = sinα*ρg
     # numerics
     nz         = 64
-    ny         = ceil(Int,nz*ly/lz) + 5
+    ny         = ceil(Int,nz*ly/lz)
     cfl        = 1/2.1
     ϵtol       = 1e-4
     gd_ϵtol    = 1e-3
     ηrel       = 1e-2
     maxiter    = 200max(ny,nz)
-    ncheck     = 5max(ny,nz)
+    ncheck     = 10max(ny,nz)
     re         = π/10
     gd_maxiter = 100
     bt_maxiter = 3
-    γ0         = 1e2
+    γ0         = 1e4
+    nsm        = 50
     # preprocessing
     dy,dz      = ly/ny,lz/nz
     yc,zc      = LinRange(-ly/2+dy/2,ly/2-dy/2,ny),LinRange(dz/2,lz-dz/2,nz)
@@ -202,38 +203,40 @@ end
     Jn         = zeros(ny-1,nz-1)
     # init
     k_synt .= k0
-    k_inv  .= 0.5.*k_synt .+ 0.5.*k0.*(rand(ny-1,nz-1).-0.5)
+    k_inv  .= 1.2*k_synt .+ 0.1.*k0.*(rand(ny-1,nz-1).-0.5)
     wt_cost = @. exp(4.0*(zc' - lz)/lz)
     # action
     # synthetic solution
     solve_forward!(vx_obs,τxy,τxz,r_vx,k_synt,ηeff_xy,ηeff_xz,ρgsinα,npow,ηreg,ηrel,psc,dy,dz,ny,nz,ly,lz,re,cfl,vdτ,ϵtol,maxiter,ncheck)
     eval_ηeff!(ηeff_synt,k_synt,vx_obs,ηreg,npow,dy,dz)
-    re         = π/4
-    npow2      = 1.0
     # initial guess
-    solve_forward!(vx_inv,τxy,τxz,r_vx,k_inv,ηeff_xy,ηeff_xz,ρgsinα,npow2,ηreg,ηrel,psc,dy,dz,ny,nz,ly,lz,re,cfl,vdτ,ϵtol,maxiter,ncheck)
+    solve_forward!(vx_inv,τxy,τxz,r_vx,k_inv,ηeff_xy,ηeff_xz,ρgsinα,npow,ηreg,ηrel,psc,dy,dz,ny,nz,ly,lz,re,cfl,vdτ,ϵtol,maxiter,ncheck)
     γ     = γ0
     J_old = sqrt(cost(vx_inv,vx_obs,wt_cost)*dy*dz)
     J_ini = J_old
     J_evo = Float64[]; gd_iters = Int[]
     # gradient descent
+    println("gradient descent:")
     for gd_iter = 1:gd_maxiter
         k_ini .= k_inv
-        solve_adjoint!(Ψ,∂Ψ_∂τ,∂J_∂v,JVP,tmp,vx_obs,wt_cost,r_vx,vx_inv,k_inv,ηeff_xy,ηeff_xz,npow2,ηreg,ρgsinα,dy,dz,ny,nz)
-        cost_gradient!(Jn,Ψ,minusΨ,r_vx,vx_inv,k_inv,npow2,ηreg,ρgsinα,dy,dz)
+        solve_adjoint!(Ψ,∂Ψ_∂τ,∂J_∂v,JVP,tmp,vx_obs,wt_cost,r_vx,vx_inv,k_inv,ηeff_xy,ηeff_xz,npow,ηreg,ρgsinα,dy,dz,ny,nz)
+        cost_gradient!(Jn,Ψ,minusΨ,r_vx,vx_inv,k_inv,npow,ηreg,ρgsinα,dy,dz)
         # backtracking line search
-        for _ = 1:bt_maxiter
+        for bt_iter = 1:bt_maxiter
+            println("  line search #iter $bt_iter:")
             @. k_inv = k_inv - γ*Jn
-            smooth!(k_inv,k_tmp,50)
-            solve_forward!(vx_inv,τxy,τxz,r_vx,k_inv,ηeff_xy,ηeff_xz,ρgsinα,npow2,ηreg,ηrel,psc,dy,dz,ny,nz,ly,lz,re,cfl,vdτ,ϵtol,maxiter,ncheck)
+            smooth!(k_inv,k_tmp,nsm)
+            solve_forward!(vx_inv,τxy,τxz,r_vx,k_inv,ηeff_xy,ηeff_xz,ρgsinα,npow,ηreg,ηrel,psc,dy,dz,ny,nz,ly,lz,re,cfl,vdτ,ϵtol,maxiter,ncheck)
             J_new = sqrt(cost(vx_inv,vx_obs,wt_cost)*dy*dz)
             if J_new < J_old
-                γ *= 1.2
+                γ *= 1.1
                 J_old = J_new
+                @printf("  new value accepted, misfit = %.1e\n", J_old)
                 break
             else
                 k_inv .= k_ini
-                γ = max(γ*0.5, 0.1*γ0)
+                γ = max(0.5*γ, 0.1*γ0)
+                @printf("  restarting, new γ = %.3f\n",γ)
             end
         end
         # visualise
@@ -242,10 +245,10 @@ end
         make_plots(vx_obs,vx_inv,ηeff_synt,ηeff_inv,yc,zc,gd_iters,J_evo)
         # check convergence
         if J_old/J_ini < gd_ϵtol
-            @printf("  gradient descent converged, misfit = %.1e\n", J_old)
+            @printf("gradient descent converged, misfit = %.1e\n", J_old)
             break
         else
-            @printf("  #iter = %d, misfit = %.1e\n", gd_iter, J_old)
+            @printf("  gradient descent #iter = %d, misfit = %.1e\n", gd_iter, J_old)
         end
     end
     return
