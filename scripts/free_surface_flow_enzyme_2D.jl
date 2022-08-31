@@ -79,15 +79,11 @@ end
     return
 end
 
-@views function solve_adjoint!(Ψ,∂Ψ_∂τ,∂J_∂v,JVP,tmp,vx_obs,wt_cost,r_vx,vx,k,ηeff_xy,ηeff_xz,npow,ηreg,ρgsinα,dy,dz,ny,nz)
-    ϵtol = 1e-6; ncheck = 5max(size(Ψ)...); maxiter = 100ncheck
-    dmp  = 4/max(size(Ψ)...)
-    ηeffτ = zeros(ny,nz)
+@views function solve_adjoint!(Ψ,∂Ψ_∂τ,∂J_∂v,JVP,tmp,vx_obs,wt_cost,r_vx,vx,k,ηeff_xy,ηeff_xz,dτ,npow,ηreg,ρgsinα,dy,dz,ny,nz,dmp,ϵtol,maxiter,ncheck)
     for iz = axes(r_vx,2), iy = axes(r_vx,1)
-        ηeffτ[iy+1,iz+1] = @ηeffτ(iy,iz)
+        dτ[iy+1,iz+1] = 0.5*min(dy,dz)/sqrt(@ηeffτ(iy,iz))
     end
-    ηeffτ[[1,end],:] .= ηeffτ[[2,end-1],:];  ηeffτ[:,[1,end]] .=  ηeffτ[:,[2,end-1]]
-    dτ     = 0.5*min(dy,dz)./sqrt.(ηeffτ)
+    dτ[[1,end],:] .= dτ[[2,end-1],:];  dτ[:,[1,end]] .=  dτ[:,[2,end-1]]
     ∂J_∂v .= (vx .- vx_obs).*wt_cost
     Ψ     .= 0.0
     println("  adjoint solve:")
@@ -133,13 +129,13 @@ function eval_ηeff!(ηeff,k,vx,ηreg,npow,dy,dz)
     return
 end
 
-function make_plots(vx_synt,vx_inv,ηeff_synt,ηeff_inv,yc,zc,gd_iters,J_evo)
+function make_plots(vx_synt,vx_inv,Jn,ηeff_inv,yc,zc,gd_iters,J_evo)
     opts_2d = (aspect_ratio=1,xlims=extrema(yc),ylims=extrema(zc),framestyle=:box)
     plots = (
         heatmap(yc,zc,vx_synt';xlabel="y",ylabel="z",title="vₓ synthetic",opts_2d...),
         heatmap(yc,zc,vx_inv' ;xlabel="y",ylabel="z",title="vₓ inverse"  ,opts_2d...),
         plot(yc,[vx_synt[:,end], vx_inv[:,end]];xlabel="y",ylabel="vₓ surface",framestyle=:box,label=["vₓ synthetic" "vₓ inverse"]),
-        heatmap(yc[2:end-1],zc[2:end-1],ηeff_synt';xlabel="y",ylabel="z",title="η synthetic",clims=(1e1,1e4),colorbar_scale=:log10,opts_2d...),
+        heatmap(yc[1:end-1],zc[1:end-1],Jn';xlabel="y",ylabel="z",title="dJ/dk",opts_2d...),
         heatmap(yc[2:end-1],zc[2:end-1],ηeff_inv' ;xlabel="y",ylabel="z",title="η inverse"  ,clims=(1e1,1e4),colorbar_scale=:log10,opts_2d...),
         plot(gd_iters,J_evo;xlabel="# gradient descent iters",ylabel="J/J_ini",yscale=:log10,framestyle=:box,legend=false,markershape=:circle),
     )
@@ -166,7 +162,8 @@ end
     nz         = 64
     ny         = ceil(Int,nz*ly/lz)
     cfl        = 1/2.1
-    ϵtol       = 1e-4
+    ϵtol       = 1e-6
+    dmp        = 4/max(ny,nz)
     gd_ϵtol    = 1e-3
     ηrel       = 1e-2
     maxiter    = 200max(ny,nz)
@@ -174,8 +171,8 @@ end
     re         = π/10
     gd_maxiter = 500
     bt_maxiter = 10
-    γ0         = 1e7
-    nsm        = 10
+    γ0         = 1e5
+    nsm        = 100
     # preprocessing
     dy,dz      = ly/ny,lz/nz
     yc,zc      = LinRange(-ly/2+dy/2,ly/2-dy/2,ny),LinRange(dz/2,lz-dz/2,nz)
@@ -193,6 +190,7 @@ end
     k_synt     = zeros(ny-1,nz-1)
     k_inv      = zeros(ny-1,nz-1)
     Ψ          = zeros(ny  ,nz  )
+    dτ         = zeros(ny  ,nz  )
     minusΨ     = zeros(ny-2,nz-2)
     ∂Ψ_∂τ      = zeros(ny  ,nz  )
     JVP        = zeros(ny  ,nz  )
@@ -203,18 +201,14 @@ end
     Jn         = zeros(ny-1,nz-1)
     # init
     k_synt .= k0
-    k_inv  .= 50.0.*k_synt
-    wt_cost = @. exp(0.0*(zc' - lz)/lz)
+    k_inv  .= k_synt.*(1.0 .+ 0.5.*(rand(ny-1,nz-1).-0.1))
+    wt_cost = @. exp(5.0*(zc' - lz)/lz)
     # action
     # synthetic solution
     solve_forward!(vx_obs,τxy,τxz,r_vx,k_synt,ηeff_xy,ηeff_xz,ρgsinα,npow,ηreg,ηrel,psc,dy,dz,ny,nz,ly,lz,re,cfl,vdτ,ϵtol,maxiter,ncheck)
     eval_ηeff!(ηeff_synt,k_synt,vx_obs,ηreg,npow,dy,dz)
-    ##################################
-    npow2      = 1.0
-    re         = π/4
-    ##################################
     # initial guess
-    solve_forward!(vx_inv,τxy,τxz,r_vx,k_inv,ηeff_xy,ηeff_xz,ρgsinα,npow2,ηreg,ηrel,psc,dy,dz,ny,nz,ly,lz,re,cfl,vdτ,ϵtol,maxiter,ncheck)
+    solve_forward!(vx_inv,τxy,τxz,r_vx,k_inv,ηeff_xy,ηeff_xz,ρgsinα,npow,ηreg,ηrel,psc,dy,dz,ny,nz,ly,lz,re,cfl,vdτ,ϵtol,maxiter,ncheck)
     γ     = γ0
     J_old = sqrt(cost(vx_inv,vx_obs,wt_cost)*dy*dz)
     J_ini = J_old
@@ -223,37 +217,33 @@ end
     println("gradient descent:")
     for gd_iter = 1:gd_maxiter
         k_ini .= k_inv
-        solve_adjoint!(Ψ,∂Ψ_∂τ,∂J_∂v,JVP,tmp,vx_obs,wt_cost,r_vx,vx_inv,k_inv,ηeff_xy,ηeff_xz,npow2,ηreg,ρgsinα,dy,dz,ny,nz)
-        cost_gradient!(Jn,Ψ,minusΨ,r_vx,vx_inv,k_inv,npow2,ηreg,ρgsinα,dy,dz)
+        solve_adjoint!(Ψ,∂Ψ_∂τ,∂J_∂v,JVP,tmp,vx_obs,wt_cost,r_vx,vx_inv,k_inv,ηeff_xy,ηeff_xz,dτ,npow,ηreg,ρgsinα,dy,dz,ny,nz,dmp,ϵtol,maxiter,ncheck)
+        cost_gradient!(Jn,Ψ,minusΨ,r_vx,vx_inv,k_inv,npow,ηreg,ρgsinα,dy,dz)
         # backtracking line search
         bt_iter = 1
-        relmax = 0.05
         while bt_iter <= bt_maxiter
             println("  line search #iter $bt_iter:")
             δk = .-γ.*Jn
-            δk_rel = δk./k_inv
-            δk_rel[abs.(δk_rel) .>= relmax] = relmax.*sign.(δk_rel[abs.(δk_rel) .>= relmax])
-            δk .= δk_rel.*k_inv
             @. k_inv = k_inv + δk
             smooth!(k_inv,k_tmp,nsm)
-            solve_forward!(vx_inv,τxy,τxz,r_vx,k_inv,ηeff_xy,ηeff_xz,ρgsinα,npow2,ηreg,ηrel,psc,dy,dz,ny,nz,ly,lz,re,cfl,vdτ,ϵtol,maxiter,ncheck)
+            solve_forward!(vx_inv,τxy,τxz,r_vx,k_inv,ηeff_xy,ηeff_xz,ρgsinα,npow,ηreg,ηrel,psc,dy,dz,ny,nz,ly,lz,re,cfl,vdτ,ϵtol,maxiter,ncheck)
             J_new = sqrt(cost(vx_inv,vx_obs,wt_cost)*dy*dz)
             if J_new < J_old
-                γ = min(1.1*γ, 1e3*γ)
+                γ = min(1.05*γ, 1e2*γ)
                 J_old = J_new
                 @printf("  new value accepted, misfit = %.1e\n", J_old)
                 break
             else
                 k_inv .= k_ini
-                γ = max(0.5*γ, 1e-3*γ0)
-                @printf("  restarting, new γ = %.3f\n",γ)
+                γ = max(0.5*γ, 1e-2*γ0)
+                @printf("  restarting, new γ = %.3e\n",γ)
             end
             bt_iter += 1
         end
         # visualise
         push!(gd_iters,gd_iter); push!(J_evo,J_old/J_ini)
-        eval_ηeff!(ηeff_inv,k_inv,vx_inv,ηreg,npow2,dy,dz)
-        make_plots(vx_obs,vx_inv,ηeff_synt,ηeff_inv,yc,zc,gd_iters,J_evo)
+        eval_ηeff!(ηeff_inv,k_inv,vx_inv,ηreg,npow,dy,dz)
+        make_plots(vx_obs,vx_inv,Jn,ηeff_inv,yc,zc,gd_iters,J_evo)
         # check convergence
         if bt_iter > bt_maxiter
             @printf("  line search couldn't descrease the misfit (%.1e)\n", J_old)
