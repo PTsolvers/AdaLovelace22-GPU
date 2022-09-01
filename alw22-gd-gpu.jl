@@ -55,7 +55,7 @@ md"""
 md"""
 ## What we will achieve today
 
-Inversion for viscosity in a free-surface channel flow
+Point-wise inversion for power-law prefactor in a free-surface channel flow
 
 ![inversion](./figures/inversion.gif)
 """
