@@ -522,7 +522,6 @@ qC = -D.*diff(C)./dx
     plot(xc,[C_i,C];framestyle=:box,legend=false,ylims=(-1,1))
 end every 5
 
-#nb %% A slide [code] {"slideshow": {"slide_type": "slide"}}
 #=
 ## Going 2D
 
@@ -674,25 +673,8 @@ Inversion for viscosity in a free-surface channel flow
 #src #########################################################################
 #nb # %% A slide [markdown] {"slideshow": {"slide_type": "slide"}}
 md"""
-## 5. Outlook and conclusion
+## Thank you for listening!
 
-
-"""
-
-#src #########################################################################
-#nb # %% A slide [markdown] {"slideshow": {"slide_type": "slide"}}
-md"""
-## 6. Curious?
-Some useful resources
-
-
+_luraess@ethz.ch, iutkin@ethz.ch_
 
 """
-
-
-
-
-
-
-
-
