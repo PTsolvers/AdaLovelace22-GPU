@@ -233,8 +233,335 @@ md"""
 md"""
 ## 1. The accelerated pseudo-transient (PT) method
 A physics-motivated explanation
+"""
 
-Ivan
+#nb # %% A slide [markdown] {"slideshow": {"slide_type": "slide"}}
+md"""
+## Pseudo-transient method
+
+Here, we present the pseudo-transient method for solving various problems in geodynamics
+"""
+
+#nb # %% A slide [markdown] {"slideshow": {"slide_type": "fragment"}}
+md"""
+Due to time restrictions, we are going to cover in detail only one important application, elliptic solver for Poisson problem 🐟:
+
+\begin{equation*}
+    \nabla\cdot(D\nabla C) = 0
+\end{equation*}
+where $C$ is the unknown variable and $D$ is the diffusion coefficient
+"""
+
+#nb # %% A slide [markdown] {"slideshow": {"slide_type": "fragment"}}
+md"""
+We also provide some references for further reading
+"""
+
+#nb # %% A slide [markdown] {"slideshow": {"slide_type": "slide"}}
+md"""
+## How to solve the Poisson problem? 🤔
+
+The solution to the Poisson problem could be obtained as a time limit of the transient diffusion problem:
+
+\begin{equation*}
+    \beta\frac{\partial C}{\partial t} = \nabla\cdot(D\nabla C)
+\end{equation*}
+where $t$ is time, and $\beta$ is some proportionality factor
+"""
+
+#nb # %% A slide [markdown] {"slideshow": {"slide_type": "slide"}}
+md"""
+## 1D case
+
+Consider the 1D diffusion problem with constant diffusion coefficient $D = \mathrm{const}$:
+\begin{align*}
+    \beta\frac{\partial C}{\partial t} &= -\frac{\partial q_C}{\partial x} \\
+    q_C &= -D\frac{\partial C}{\partial x}
+\end{align*}
+
+We could eliminate the flux $q_C$ to obtain the heat equation for $C$
+\begin{equation*}
+    \beta\frac{\partial C}{\partial t} = D\frac{\partial^2 C}{\partial x^2}
+\end{equation*}
+"""
+
+#nb # %% A slide [markdown] {"slideshow": {"slide_type": "slide"}}
+md"""
+*Let's implement the finite-difference solver for that problem in Julia!* 🚀
+"""
+
+#nb # %% A slide [markdown] {"slideshow": {"slide_type": "fragment"}}
+md"""
+We start by importing some packages for plotting and logging options:
+"""
+
+#nb %% A slide [code] {"slideshow": {"slide_type": "fragment"}}
+using Plots,Logging
+Logging.disable_logging(Logging.Info)
+
+#nb # %% A slide [markdown] {"slideshow": {"slide_type": "slide"}}
+md"""
+This code simulates transient diffusion in 1D:
+"""
+
+#nb %% A slide [code] {"slideshow": {"slide_type": "fragment"}}
+## physics
+lx = 10.0           # domain length
+D  = 1.0            # diffusion coefficient
+β  = 1.0            # proportionality factor
+## numerics
+nx = 100            # number of grid points
+nt = 200            # number of time steps
+## preprocessing
+dx = lx/nx          # grid spacing
+dt = dx^2/(D/β)/2.1 # time step from stability analysis
+xc = LinRange(-lx/2+dx/2,lx/2-dx/2,nx)
+## init
+C  = exp.(-xc.^2); C_i = copy(C)
+qC = zeros(nx-1)
+## action
+@gif for it = 1:nt
+    qC          .= .-D.*diff(C)./dx
+    C[2:end-1] .-= dt/β.*diff(qC)./dx
+    plot(xc,[C_i,C];framestyle=:box,legend=false,ylims=(0,1))
+end every 5
+
+#nb # %% A slide [markdown] {"slideshow": {"slide_type": "slide"}}
+md"""
+## Is that all?
+No 😅. This code works, but there is one problem:
+"""
+
+#nb # %% A slide [markdown] {"slideshow": {"slide_type": "fragment"}}
+md"""
+*It doesn't scale!*
+"""
+
+#nb # %% A slide [markdown] {"slideshow": {"slide_type": "slide"}}
+md"""
+The problem is the stability criterion for explicit time integration:
+
+```julia
+dt = dx^2/(D/β)/2.1
+```
+"""
+
+#nb # %% A slide [markdown] {"slideshow": {"slide_type": "fragment"}}
+md"""
+The number of the time steps required for convergence is proportional to `nx^2`
+"""
+
+#nb # %% A slide [markdown] {"slideshow": {"slide_type": "fragment"}}
+md"""
+Could we do better? Yes! Before discussing acceleration, we need to consider one important physical process
+"""
+
+#nb # %% A slide [markdown] {"slideshow": {"slide_type": "slide"}}
+md"""
+## Acoustic wave propagation
+
+\begin{align*}
+    \beta\frac{\partial P}{\partial t} &= -\frac{\partial U}{\partial x}~, \\
+    \rho\frac{\partial U}{\partial t} &= -\frac{\partial P}{\partial x}~.
+\end{align*}
+Here, $P$ is the pressure, $U$ is the displacement, $\beta$ is the compressibility, and $\rho$ is the density.
+"""
+
+#nb # %% A slide [markdown] {"slideshow": {"slide_type": "slide"}}
+md"""
+By eliminating $U$, we obtain the wave equation:
+\begin{equation*}
+    \frac{\partial^2 P}{\partial t^2} = \frac{1}{\rho\beta}\frac{\partial^2 P}{\partial x^2}~.
+\end{equation*}
+"""
+
+#nb # %% A slide [markdown] {"slideshow": {"slide_type": "fragment"}}
+md"""
+*Let's implement the finite-difference solver for that problem in Julia!* 🚀
+"""
+
+#nb %% A slide [code] {"slideshow": {"slide_type": "slide"}}
+## physics
+lx = 10.0           # domain length
+β  = 1.0            # compressibility
+ρ  = 1.0            # density
+## numerics
+nx = 100            # number of grid points
+nt = 200            # number of time steps
+## preprocessing
+dx = lx/nx          # grid spacing
+dt = dx/sqrt(1/ρ/β) # time step from stability analysis
+xc = LinRange(-lx/2+dx/2,lx/2-dx/2,nx)
+## init
+Pr = exp.(-xc.^2); Pr_i = copy(Pr)
+Ux = zeros(nx-1)
+## action
+@gif for it = 1:nt
+    Ux          .-= dt/ρ.*diff(Pr)./dx
+    Pr[2:end-1] .-= dt/β.*diff(Ux)./dx
+    plot(xc,[Pr_i,Pr];framestyle=:box,legend=false,ylims=(-1,1))
+end every 5
+
+#nb # %% A slide [markdown] {"slideshow": {"slide_type": "slide"}}
+md"""
+Now the time step depends only linearly on the grid spacing `nx`:
+```julia
+dt = dx/sqrt(1/ρ/β)
+```
+"""
+
+#nb # %% A slide [markdown] {"slideshow": {"slide_type": "fragment"}}
+md"""
+But the problem doesn't have the steady-state!
+"""
+
+#nb # %% A slide [markdown] {"slideshow": {"slide_type": "fragment"}}
+md"""
+Can we have best from both worlds?
+"""
+
+#nb # %% A slide [markdown] {"slideshow": {"slide_type": "slide"}}
+md"""
+## Damped wave equation
+
+\begin{align*}
+    \beta\frac{\partial C}{\partial t} &= -\frac{\partial q_C}{\partial x} \\
+    \rho\frac{\partial q_C}{\partial t} + \frac{q_C}{D} &= -\frac{\partial C}{\partial x}
+\end{align*}
+"""
+
+#nb # %% A slide [markdown] {"slideshow": {"slide_type": "subslide"}}
+md"""
+## Compare the equations
+
+| Diffusion                                                                   | Wave propagation                                                          | Damped wave propagation                                                                    |
+|-----------------------------------------------------------------------------|---------------------------------------------------------------------------|--------------------------------------------------------------------------------------------|
+| $$ \frac{q_C}{D} = -\frac{\partial C}{\partial x} $$                        | $$ \rho\frac{\partial U}{\partial t} = -\frac{\partial P}{\partial x} $$  | $$ \rho\frac{\partial q_C}{\partial t} + \frac{q_C}{D} = -\frac{\partial C}{\partial x} $$ |
+| $$ \beta\frac{\partial C}{\partial t} = -\frac{\partial q_C}{\partial x} $$ | $$ \beta\frac{\partial P}{\partial t} = -\frac{\partial U}{\partial x} $$ | $$ \beta\frac{\partial C}{\partial t} = -\frac{\partial q_C}{\partial x} $$                |
+"""
+
+#nb %% A slide [code] {"slideshow": {"slide_type": "slide"}}
+## physics
+lx = 10.0
+D  = 1.0
+ρ  = 1.0
+β  = 1.0
+## numerics
+nx = 100
+nt = 500
+## preprocessing
+dx = lx/nx
+xc = LinRange(-lx/2+dx/2,lx/2-dx/2,nx)
+dt = dx/sqrt(1/ρ/β)/1.1
+## init
+C  = exp.(-xc.^2); C_i = copy(C)
+qC = .-D.*diff(C)./dx
+## action
+@gif for it = 1:nt
+    qC         .-= dt/(ρ*D+dt).*(qC .+ D.*diff(C)./dx)
+    C[2:end-1] .-= dt/β.*diff(qC)./dx
+    plot(xc,[C_i,C];framestyle=:box,legend=false,ylims=(-1,1))
+end every 5
+
+#=
+Now, both the diffusion and the wave propagation are featured in the solution
+
+Let's decrease $\beta$:
+=#
+β = 0.1
+
+# And re-run the code
+dt = dx/sqrt(1/ρ/β)/1.1
+## init
+C  = exp.(-xc.^2); C_i = copy(C)
+qC = -D.*diff(C)./dx
+## action
+@gif for it = 1:nt
+    qC         .-= dt/(ρ*D+dt).*(qC .+ D.*diff(C)./dx)
+    C[2:end-1] .-= dt/β.*diff(qC)./dx
+    plot(xc,[C_i,C];framestyle=:box,legend=false,ylims=(-1,1))
+end every 5
+
+#=
+We can see, that the process is now dominated by wave propagation
+
+Let's make $\beta$ larger now:
+=#
+β = 1000.0
+
+# And re-run the code
+dt = dx/sqrt(1/ρ/β)/1.1
+## init
+C  = exp.(-xc.^2); C_i = copy(C)
+qC = -D.*diff(C)./dx
+## action
+@gif for it = 1:nt
+    qC         .-= dt/(ρ*D+dt).*(qC .+ D.*diff(C)./dx)
+    C[2:end-1] .-= dt/β.*diff(qC)./dx
+    plot(xc,[C_i,C];framestyle=:box,legend=false,ylims=(-1,1))
+end every 5
+
+#=
+Now the process is dominated by diffusion
+
+There is an optimal value for $\beta$, that guarantees the fastest convergence to steady state:
+=#
+
+re = 2π
+β  = ρ*D^2*re^2/lx^2
+
+# Let's re-run the code
+dt = dx/sqrt(1/ρ/β)/1.1
+## init
+C  = exp.(-xc.^2); C_i = copy(C)
+qC = -D.*diff(C)./dx
+## action
+@gif for it = 1:nt
+    qC         .-= dt/(ρ*D+dt).*(qC .+ D.*diff(C)./dx)
+    C[2:end-1] .-= dt/β.*diff(qC)./dx
+    plot(xc,[C_i,C];framestyle=:box,legend=false,ylims=(-1,1))
+end every 5
+
+#nb %% A slide [code] {"slideshow": {"slide_type": "slide"}}
+#=
+## Going 2D
+
+Extension to 2D and even 3D is straightforward:
+=#
+## physics
+lx,ly = 10.0,10.0
+dc    = 1.0
+ρ     = 1.0
+re    = 2π
+β     = ρ*D^2*re^2/lx^2
+## numerics
+nx,ny = 100,100
+nt    = 500
+## preprocessing
+dx,dy = lx/nx, ly/ny
+xc,yc = LinRange(-lx/2+dx/2,lx/2-dx/2,nx),LinRange(-ly/2+dy/2,ly/2-dy/2,ny)
+dt    = min(dx,dy)/sqrt(1/ρ/β)/1.5
+## init
+C       = exp.(-xc.^2 .- yc'.^2)
+qCx,qCy = zeros(nx-1,ny-2),zeros(nx-2,ny-1)
+## action
+@gif for it = 1:nt
+    qCx .-= dt/(ρ*D+dt).*(qCx .+ D.*diff(C[:,2:end-1],dims=1)./dx)
+    qCy .-= dt/(ρ*D+dt).*(qCy .+ D.*diff(C[2:end-1,:],dims=2)./dy)
+    C[2:end-1,2:end-1] .-= dt/β.*(diff(qCx,dims=1)./dx .+ diff(qCy,dims=2)./dy)
+    heatmap(xc,yc,C';framestyle=:box,xlims=(-lx/2,lx/2),ylims=(-ly/2,ly/2),aspect_ratio=1)
+end every 5
+
+#nb # %% A slide [markdown] {"slideshow": {"slide_type": "slide"}}
+md"""
+We published a paper recently that covers in detail how to derive these optimal parameters for various problems
+<img src="./figures/gmd_paper_title.png" alt="PT paper title page" width="800"/>
+"""
+
+#nb # %% A slide [markdown] {"slideshow": {"slide_type": "slide"}}
+md"""
+Problems include steady-state diffusion, transient diffusion, and Stokes flow
+![PT iteration parameters](./figures/fig_niter_optimal.png)
 """
 
 #src #########################################################################
