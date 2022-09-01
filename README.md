@@ -32,8 +32,16 @@ _To view the notebook as slide, you need to install the [RISE](https://rise.read
 
 ## Resources
 
-#### Packages
-- ...
+#### The pseudo-transient method
+GMD paper: https://doi.org/10.5194/gmd-15-5757-2022
+- Stokes flow examples: https://github.com/PTsolvers/PseudoTransientStokes.jl
+- Diffusion solver examples: https://github.com/PTsolvers/PseudoTransientDiffusion.jl
+
+#### Julia packages
+- [ParallelStencil.jl](https://github.com/omlins/ParallelStencil.jl)
+- [ImplicitGlobalGrid.jl](https://github.com/eth-cscs/ImplicitGlobalGrid.jl)
+- [CUDA.jl](https://github.com/JuliaGPU/CUDA.jl)
+- [Enzyme.jl](https://github.com/EnzymeAD/Enzyme.jl)
 
 #### Courses and resources
 - ETHZ course on solving PDEs with GPUs: https://pde-on-gpu.vaw.ethz.ch
