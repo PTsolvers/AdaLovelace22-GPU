@@ -57,7 +57,7 @@ md"""
 
 Inversion for viscosity in a free-surface channel flow
 
-![gpu](./figures/inversion.gif)
+![inversion](./figures/inversion.gif)
 """
 #src memo: gifsicle --loop=1 -d 50 inversion.gif > inversion1.gif
 
@@ -134,6 +134,25 @@ md"""
 - 1 (fused) addition and division => **1 floating point operations**
 
 👉 assuming $D$, $∂x$ are scalars, $q$ and $A$ are arrays of `Float64` (read from main memory)
+"""
+
+#src #########################################################################
+#nb # %% A slide [markdown] {"slideshow": {"slide_type": "slide"}}
+md"""
+## Performance that matters
+
+Not yet convinced?
+
+"""
+
+#nb # %% A slide [markdown] {"slideshow": {"slide_type": "fragment"}}
+md"""
+Performance comparison between the pseudo-transient (PT) and direct-iterative (DI) method resolving
+2D shear-band formation out of a random noise cohesion field.
+
+![pt_plastic2d](./figures/pt_plastic2d.png)
+
+Räss et al. (2022) - https://doi.org/10.1029/2019GC008531
 """
 
 #src #########################################################################
@@ -222,8 +241,37 @@ Ivan
 #nb # %% A slide [markdown] {"slideshow": {"slide_type": "slide"}}
 md"""
 ## 2. Application of the PT method to GPU supercomputing
+Resolving nonlinear mechanical problems with elasto-viscoplastic rheology in 3D
 
-Ludovic
+![pt_plastic3d](./figures/pt_plastic3d.png)
+
+Räss et al. (2022) - https://doi.org/10.1029/2019GC008531
+"""
+
+#src #########################################################################
+#nb # %% A slide [markdown] {"slideshow": {"slide_type": "slide"}}
+md"""
+## Scalability of the accelerated PT method I
+
+Iteration count normalised by number of grid points in x-direction to remain mostly constant as function of `nx`.
+
+![pt_iter_scale](./figures/pt_iter_scale.png)
+
+Räss et al. (2022) - https://doi.org/10.1029/2019GC008531
+"""
+
+#src #########################################################################
+#nb # %% A slide [markdown] {"slideshow": {"slide_type": "slide"}}
+md"""
+## Scalability of the accelerated PT method II
+
+Next, as the PT algorithm is fully local, we achieve ideal parallel efficiency on 2000 GPUs.
+
+![pt_multigpu](./figures/pt_multigpu.png)
+
+We use asynchronous GPU function execution to hide MPI communication behind computations. A ready.to-use feature in [`ImplicitGlobalGrid.jl`](https://github.com/eth-cscs/ImplicitGlobalGrid.jl).
+
+Räss et al. (2022) - https://doi.org/10.1029/2019GC008531
 """
 
 #src #########################################################################
@@ -238,10 +286,37 @@ Ivan
 #src #########################################################################
 #nb # %% A slide [markdown] {"slideshow": {"slide_type": "slide"}}
 md"""
+## The adjoint method
+
+![adjoint_inv](./figures/adjoint_inv.png)
+"""
+
+#src #########################################################################
+#nb # %% A slide [markdown] {"slideshow": {"slide_type": "slide"}}
+md"""
+## Automatic differentiation and the PT method
+
+![adjoint_pt_ad](./figures/adjoint_pt_ad.png)
+"""
+
+#src #########################################################################
+#nb # %% A slide [markdown] {"slideshow": {"slide_type": "slide"}}
+md"""
+## AD approach in Julia
+
+![adjoint_julia_tools](./figures/adjoint_julia_tools.png)
+"""
+
+
+#src #########################################################################
+#nb # %% A slide [markdown] {"slideshow": {"slide_type": "slide"}}
+md"""
 ## 4. Application
 Point-wise inversion for power-law prefactor in a free-surface channel flow
 
-Ivan
+Inversion for viscosity in a free-surface channel flow
+
+![inversion](./figures/inversion.gif)
 """
 
 
