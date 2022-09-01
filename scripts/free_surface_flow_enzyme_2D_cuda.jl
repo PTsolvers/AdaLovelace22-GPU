@@ -160,8 +160,6 @@ end
         JVP .= .-∂J_∂v; tmp .= Ψ[2:end-1,2:end-1]
         CUDA.@sync @cuda threads=nthreads blocks=nblocks ∂r_∂v!(JVP,tmp,r_vx,vx,k,npow,ηreg,ρgsinα,dy,dz)
         CUDA.@sync @cuda threads=nthreads blocks=nblocks update_Ψ!(Ψ,∂Ψ_∂τ,dτ,JVP,dmp)
-        # @. ∂Ψ_∂τ = ∂Ψ_∂τ*(1.0-dmp) + dτ*JVP
-        # @. Ψ    += dτ*∂Ψ_∂τ
         CUDA.@sync @cuda threads=nthreads blocks=nblocks apply_bcΨy!(dτ)
         CUDA.@sync @cuda threads=nthreads blocks=nblocks apply_bcΨz!(dτ)
         if iter % ncheck == 0
@@ -282,7 +280,6 @@ end
     k_tmp      = CUDA.zeros(Float64,ny-1,nz-1)
     k_ini      = CUDA.zeros(Float64,ny-1,nz-1)
     Jn         = CUDA.zeros(Float64,ny-1,nz-1)
-    δk         = CUDA.zeros(Float64,ny-1,nz-1)
     # init
     k_synt .= k0
     k_inv  .= k_synt.*(1.0 .+ 0.5.*(CUDA.rand(Float64,ny-1,nz-1).-0.1))
@@ -307,8 +304,7 @@ end
         bt_iter = 1
         while bt_iter <= bt_maxiter
             println("  line search #iter $bt_iter:")
-            @. δk = -γ * Jn
-            @. k_inv = k_inv + δk
+            @. k_inv = k_inv - γ*Jn
             smooth!(k_inv,k_tmp,nsm,nthreads,nblocks)
             solve_forward!(vx_inv,τxy,τxz,r_vx,k_inv,ηeff_xy,ηeff_xz,ρgsinα,npow,ηreg,ηrel,psc,dy,dz,ny,nz,ly,lz,re,cfl,vdτ,ϵtol,maxiter,ncheck,nthreads,nblocks)
             J_new = sqrt(cost(vx_inv,vx_obs,wt_cost)*dy*dz)

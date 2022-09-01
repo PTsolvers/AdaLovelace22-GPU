@@ -218,8 +218,7 @@ end
         bt_iter = 1
         while bt_iter <= bt_maxiter
             println("  line search #iter $bt_iter:")
-            δk = .-γ.*Jn
-            @. k_inv = k_inv + δk
+            @. k_inv = k_inv - γ*Jn
             smooth!(k_inv,k_tmp,nsm)
             solve_forward!(vx_inv,τxy,τxz,r_vx,k_inv,ηeff_xy,ηeff_xz,ρgsinα,npow,ηreg,ηrel,psc,dy,dz,ny,nz,ly,lz,re,cfl,vdτ,ϵtol,maxiter,ncheck)
             J_new = sqrt(cost(vx_inv,vx_obs,wt_cost)*dy*dz)
