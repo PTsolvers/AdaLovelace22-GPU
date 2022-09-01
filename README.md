@@ -16,7 +16,10 @@ using Pkg
 Pkg.activate(@__DIR__)
 Pkg.resolve()
 Pkg.instantiate()
+Pkg.add(url="https://github.com/EnzymeAD/Enzyme.jl.git", rev="main")
 ```
+_:warning: Note that the `main` branch of Enzyme.jl should be used._
+
 3. Run the deploy script
 ```julia-repl
 julia> using Literate
