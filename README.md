@@ -3,6 +3,7 @@ GPU-computing in geodynamics workshop material
 
 Program: https://meetings.copernicus.org/2022AdaLovelaceWorkshop/programme/programme.html
 
+
 ## Automatic notebook generation
 
 The presentation slides and the demo notebook are self-contained in a Jupyter notebook [alw22-gd-gpu.ipynb](alw22-gd-gpu.ipynb) that can be auto-generated using literate programming by deploying the [alw22-gd-gpu.jl](alw22-gd-gpu.jl) script.
@@ -29,6 +30,13 @@ julia> using IJulia
 julia> notebook(dir="./")
 ```
 _To view the notebook as slide, you need to install the [RISE](https://rise.readthedocs.io/en/stable/installation.html) plugin_
+
+
+## Self-contained adjoint-based GD inversion scripts
+The scripts used to produce the adjoint-based gradient descent point-wise inversion for the power-law prefactor in a free-surface channel flow are accessible in the [scripts](scripts) folder:
+- GPU version: [free_surface_flow_enzyme_2D_cuda.jl](scripts/free_surface_flow_enzyme_2D_cuda.jl)
+- CPU version: [free_surface_flow_enzyme_2D.jl](scripts/free_surface_flow_enzyme_2D.jl)
+
 
 ## Resources
 
