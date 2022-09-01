@@ -606,8 +606,6 @@ Räss et al. (2022) - https://doi.org/10.1029/2019GC008531
 md"""
 ## 3. Revisiting the adjoint method implementation
 Using automatic differentiation (AD) and the PT method
-
-Ivan
 """
 
 #src #########################################################################
@@ -640,7 +638,33 @@ md"""
 md"""
 ## 4. Application
 Point-wise inversion for power-law prefactor in a free-surface channel flow
+"""
 
+#src #########################################################################
+#nb # %% A slide [markdown] {"slideshow": {"slide_type": "slide"}}
+md"""
+## Problem formulation
+
+<img src="./figures/statement.png" alt="PT paper title page" width="800"/>
+"""
+
+#src #########################################################################
+#nb # %% A slide [markdown] {"slideshow": {"slide_type": "slide"}}
+md"""
+## Problem formulation
+
+We consider the shear-driven Stokes flow with power-law rheology in quasi-2D setup:
+
+\begin{gather*}
+    \frac{\partial \tau_{xy}}{\partial y} + \frac{\tau_{xz}}{\partial z} + \rho g\sin\alpha = 0 \\
+    \tau_{ij} = 2\eta e_{ij} \\
+    \eta = ke_{II}^{n-1}
+\end{gather*}
+"""
+
+#src #########################################################################
+#nb # %% A slide [markdown] {"slideshow": {"slide_type": "slide"}}
+md"""
 Inversion for viscosity in a free-surface channel flow
 
 ![inversion](./figures/inversion.gif)
