@@ -174,9 +174,9 @@ CUDA.device!(7) # select specific GPU
 nx = ny = 512*64
 C  = @rand(nx,ny)
 D  = @rand(nx,ny)
-dx = dy = dt = rand(); C2 = copy(T)
+dx = dy = dt = rand(); C2 = copy(C)
 @parallel function diffusion_step!(C2, C, D, dt, dx, dy)
-    @inn(T2) = @inn(T) + dt*@inn(D)*(@d2_xi(T)/dx/dx + @d2_yi(T)/dy/dy)
+    @inn(C2) = @inn(C) + dt*@inn(D)*(@d2_xi(C)/dx/dx + @d2_yi(C)/dy/dy)
     return
 end
 
@@ -188,7 +188,7 @@ We can now sample the performance on the GPU:
 t_it = @belapsed begin @parallel diffusion_step!($C2, $C, $D, $dt, $dx, $dy); end
 T_eff = (2*1+1)*1/1e9*nx*ny*sizeof(Float64)/t_it
 println("T_eff = $(T_eff) GiB/s using ParallelStencil on Nvidia A100 GPU")
-println("So that's cool. We are getting close to hardware limit, running at $(T_eff_psind/1355) % of memory copy! 🚀")
+println("So that's cool. We are getting close to hardware limit, running at $(T_eff/1355*100) % of memory copy! 🚀")
 
 #src #########################################################################
 #nb # %% A slide [markdown] {"slideshow": {"slide_type": "slide"}}
