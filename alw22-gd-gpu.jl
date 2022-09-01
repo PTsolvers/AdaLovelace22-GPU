@@ -47,7 +47,7 @@ md"""
 
 ### Ludovic Räss & Ivan Utkin
 
-![eth logo](./figures/logo2.png)
+![eth logo](./figures/logo_eth_wsl.png)
 """
 
 #src #########################################################################
